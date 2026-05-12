@@ -21,7 +21,7 @@ app.add_middleware(
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "https://knowledge-graph-llm-query-engine.onrender.com",
-        "https://your-frontend-name.onrender.com",
+        "https://knowledge-graph-llm.onrender.com",
         "*"
     ],
     allow_credentials=False,
