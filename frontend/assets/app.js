@@ -1,4 +1,4 @@
-const API_BASE_URL = localStorage.getItem('KG_API_URL') || 'http://127.0.0.1:8000';
+const API_BASE_URL = localStorage.getItem('KG_API_URL') || 'https://knowledge-graph-llm-query-engine.onrender.com';
 
 function setStatus(id, message, isError = false) {
   const el = document.getElementById(id);
