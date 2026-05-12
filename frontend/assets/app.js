@@ -10,10 +10,17 @@ function setStatus(id, message, isError = false) {
 async function checkHealth() {
   try {
     const res = await fetch(`${API_BASE_URL}/api/graph/health`);
-    const data = await res.json();
+    const text = await res.text();
+
+    if (!res.ok) {
+      setStatus('healthStatus', `Backend error ${res.status}:\n${text}`, true);
+      return;
+    }
+
+    const data = JSON.parse(text);
     setStatus('healthStatus', `Neo4j: ${data.neo4j}\nSupabase: ${data.supabase}`);
   } catch (err) {
-    setStatus('healthStatus', 'Backend is not reachable. Start FastAPI first.', true);
+    setStatus('healthStatus', `Backend is not reachable.\n${err.message}`, true);
   }
 }
 
