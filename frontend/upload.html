@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upload Document — Knowledge Graph</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Syne', 'sans-serif'],
+            mono:    ['DM Mono', 'monospace'],
+            body:    ['Manrope', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { font-family: 'Manrope', sans-serif; }
+
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 56px 56px;
+    }
+
+    .top-glow::before {
+      content: '';
+      position: fixed;
+      top: -8%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 640px;
+      height: 320px;
+      background: radial-gradient(ellipse, rgba(163,230,53,0.05) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .fade-up { opacity: 0; animation: fadeUp 0.55s ease forwards; }
+    .d1 { animation-delay: 0.05s; }
+    .d2 { animation-delay: 0.15s; }
+    .d3 { animation-delay: 0.25s; }
+    .d4 { animation-delay: 0.35s; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Drop zone */
+    .drop-zone {
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: #a3e635;
+      background: rgba(163,230,53,0.04);
+    }
+    .drop-zone:hover .upload-icon,
+    .drop-zone.dragover .upload-icon {
+      color: #a3e635;
+    }
+    .upload-icon { transition: color 0.2s ease; }
+
+    /* File input — hide native, style label */
+    #file { display: none; }
+
+    /* Submit button */
+    .btn-submit {
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+    .btn-submit:hover:not(:disabled) {
+      background: #a3e635;
+      color: #09090b;
+      border-color: #a3e635;
+    }
+    .btn-submit:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Back link */
+    .back-link { transition: color 0.15s ease; }
+    .back-link:hover { color: #a3e635; }
+
+    #uploadStatus { font-family: 'DM Mono', monospace; }
+
+    .dot-live { animation: dotBlink 2.4s ease-in-out infinite; }
+    @keyframes dotBlink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.2; }
+    }
+
+    /* Tag pills */
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.06em;
+      color: #71717a;
+    }
+  </style>
+</head>
+
+<body class="bg-[#09090b] text-zinc-100 min-h-screen antialiased grid-bg top-glow relative overflow-x-hidden">
+
+  <main class="relative z-10 max-w-3xl mx-auto px-5 sm:px-8 py-14 sm:py-20">
+
+    <!-- ── Back nav ───────────────────────────────────────── -->
+    <div class="fade-up d1 mb-10">
+      <a href="index.html" class="back-link inline-flex items-center gap-2 font-mono text-[0.68rem] tracking-widest uppercase text-zinc-500 no-underline">
+        <span>←</span>
+        <span>Home</span>
+      </a>
+    </div>
+
+    <!-- ── Page header ────────────────────────────────────── -->
+    <header class="mb-10">
+      <div class="fade-up d1 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-lime-400/20 bg-lime-400/5 mb-7">
+        <span class="dot-live w-1.5 h-1.5 rounded-full bg-lime-400 shrink-0"></span>
+        <span class="font-mono text-[0.62rem] tracking-widest uppercase text-lime-400">Step 01</span>
+      </div>
+
+      <h1 class="fade-up d2 font-display font-bold text-3xl sm:text-4xl lg:text-5xl leading-[1.1] tracking-tight mb-4">
+        Upload Document
+      </h1>
+      <p class="fade-up d3 text-zinc-400 text-sm sm:text-base leading-relaxed max-w-md font-light">
+        Extract text, build entities &amp; relationships, store graph data in Neo4j, and metadata in Supabase.
+      </p>
+    </header>
+
+    <!-- ── Upload card ────────────────────────────────────── -->
+    <section class="fade-up d3 border border-zinc-800 rounded-xl bg-[#111113] overflow-hidden mb-6">
+
+      <!-- Card top bar -->
+      <div class="flex items-center justify-between px-5 py-3 border-b border-zinc-800">
+        <span class="font-mono text-[0.6rem] tracking-widest uppercase text-zinc-500">Document ingestion</span>
+        <div class="flex gap-3">
+          <span class="tag">PDF</span>
+          <span class="tag">TXT</span>
+          <span class="tag">MD</span>
+        </div>
+      </div>
+
+      <div class="p-6 sm:p-8">
+        <form id="uploadForm" class="space-y-6">
+
+          <!-- Drop zone -->
+          <label for="file" id="dropZone" class="drop-zone block border border-dashed border-zinc-700 rounded-xl p-10 sm:p-14 cursor-pointer text-center">
+            <!-- Upload icon (SVG arrow-up-from-bracket) -->
+            <svg class="upload-icon w-8 h-8 text-zinc-600 mx-auto mb-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            </svg>
+            <p class="font-display font-semibold text-sm text-zinc-300 mb-1">Drop your file here</p>
+            <p class="text-xs text-zinc-500 font-light">or <span class="text-zinc-300 underline underline-offset-2">click to browse</span></p>
+            <p id="fileName" class="mt-4 font-mono text-xs text-lime-400 hidden"></p>
+          </label>
+
+          <input id="file" type="file" accept=".pdf,.txt,.md" />
+
+          <!-- Submit -->
+          <button
+            type="submit"
+            id="submitBtn"
+            class="btn-submit w-full sm:w-auto flex items-center justify-center gap-2.5 px-7 py-3 rounded-xl border border-zinc-700 bg-transparent font-display font-semibold text-sm text-zinc-100 tracking-tight"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z" />
+            </svg>
+            Upload &amp; Build Graph
+          </button>
+
+        </form>
+      </div>
+    </section>
+
+    <!-- ── Status panel ───────────────────────────────────── -->
+    <section class="fade-up d4">
+      <div class="border border-zinc-800 rounded-xl bg-[#111113] overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-zinc-800">
+          <div class="flex items-center gap-2.5">
+            <span class="dot-live w-2 h-2 rounded-full bg-zinc-600"></span>
+            <span class="font-mono text-[0.6rem] tracking-widest uppercase text-zinc-500">Status</span>
+          </div>
+        </div>
+        <div class="px-5 py-4 min-h-[56px]">
+          <pre id="uploadStatus" class="text-xs text-zinc-400 whitespace-pre-wrap leading-relaxed"></pre>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // File name display + drag-and-drop feedback
+    const fileInput  = document.getElementById('file');
+    const dropZone   = document.getElementById('dropZone');
+    const fileNameEl = document.getElementById('fileName');
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) {
+        fileNameEl.textContent = fileInput.files[0].name;
+        fileNameEl.classList.remove('hidden');
+      }
+    });
+
+    ['dragover','dragenter'].forEach(e => {
+      dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('dragover'); });
+    });
+    ['dragleave','drop'].forEach(e => {
+      dropZone.addEventListener(e, ev => {
+        ev.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (ev.type === 'drop' && ev.dataTransfer.files.length) {
+          fileInput.files = ev.dataTransfer.files;
+          fileInput.dispatchEvent(new Event('change'));
+        }
+      });
+    });
+  </script>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>

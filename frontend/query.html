@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Query Graph — Knowledge Graph</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Syne', 'sans-serif'],
+            mono:    ['DM Mono', 'monospace'],
+            body:    ['Manrope', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { font-family: 'Manrope', sans-serif; }
+
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 56px 56px;
+    }
+
+    .top-glow::before {
+      content: '';
+      position: fixed;
+      top: -8%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 640px;
+      height: 320px;
+      background: radial-gradient(ellipse, rgba(163,230,53,0.05) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .fade-up { opacity: 0; animation: fadeUp 0.55s ease forwards; }
+    .d1 { animation-delay: 0.05s; }
+    .d2 { animation-delay: 0.15s; }
+    .d3 { animation-delay: 0.25s; }
+    .d4 { animation-delay: 0.35s; }
+    .d5 { animation-delay: 0.45s; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .dot-live { animation: dotBlink 2.4s ease-in-out infinite; }
+    @keyframes dotBlink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.2; }
+    }
+
+    .back-link { transition: color 0.15s ease; }
+    .back-link:hover { color: #a3e635; }
+
+    /* Search input */
+    #question {
+      background: transparent;
+      outline: none;
+      width: 100%;
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.9rem;
+      color: #f4f4f5;
+    }
+    #question::placeholder { color: #52525b; }
+
+    /* Ask button */
+    .btn-ask {
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn-ask:hover:not(:disabled) {
+      background: #a3e635;
+      color: #09090b;
+      border-color: #a3e635;
+    }
+    .btn-ask:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Input row focus ring */
+    .input-row:focus-within {
+      border-color: rgba(163,230,53,0.4);
+      box-shadow: 0 0 0 1px rgba(163,230,53,0.15);
+    }
+    .input-row { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+
+    /* Panels */
+    #answerBox, #cypherBox, #queryStatus {
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* Syntax highlight hint — cypher keywords */
+    .cypher-panel { tab-size: 2; }
+  </style>
+</head>
+
+<body class="bg-[#09090b] text-zinc-100 min-h-screen antialiased grid-bg top-glow relative overflow-x-hidden">
+
+  <main class="relative z-10 max-w-4xl mx-auto px-5 sm:px-8 py-14 sm:py-20">
+
+    <!-- ── Back nav ───────────────────────────────────────── -->
+    <div class="fade-up d1 mb-10">
+      <a href="index.html" class="back-link inline-flex items-center gap-2 font-mono text-[0.68rem] tracking-widest uppercase text-zinc-500 no-underline">
+        <span>←</span>
+        <span>Home</span>
+      </a>
+    </div>
+
+    <!-- ── Page header ────────────────────────────────────── -->
+    <header class="mb-10">
+      <div class="fade-up d1 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-lime-400/20 bg-lime-400/5 mb-7">
+        <span class="dot-live w-1.5 h-1.5 rounded-full bg-lime-400 shrink-0"></span>
+        <span class="font-mono text-[0.62rem] tracking-widest uppercase text-lime-400">Step 02</span>
+      </div>
+
+      <h1 class="fade-up d2 font-display font-bold text-3xl sm:text-4xl lg:text-5xl leading-[1.1] tracking-tight mb-4">
+        Ask the Knowledge<br class="hidden sm:block">
+        <span class="text-zinc-500">Graph</span>
+      </h1>
+      <p class="fade-up d3 text-zinc-400 text-sm sm:text-base leading-relaxed max-w-md font-light">
+        Query entities and relationships using natural language — translated automatically to Cypher.
+      </p>
+    </header>
+
+    <!-- ── Query input card ───────────────────────────────── -->
+    <section class="fade-up d3 border border-zinc-800 rounded-xl bg-[#111113] overflow-hidden mb-5">
+      <div class="flex items-center px-5 py-3 border-b border-zinc-800">
+        <span class="font-mono text-[0.6rem] tracking-widest uppercase text-zinc-500">Natural language query</span>
+      </div>
+
+      <div class="p-5 sm:p-6">
+        <form id="queryForm">
+          <div class="input-row flex items-center gap-3 border border-zinc-700 rounded-xl px-4 py-3 bg-zinc-900/60">
+            <!-- Search icon -->
+            <svg class="w-4 h-4 text-zinc-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+            </svg>
+
+            <input
+              id="question"
+              type="text"
+              placeholder="What is related to OpenAI?"
+              autocomplete="off"
+              spellcheck="false"
+            />
+
+            <button
+              type="submit"
+              class="btn-ask flex items-center gap-2 px-4 py-2 rounded-lg border border-zinc-700 bg-transparent font-display font-semibold text-xs text-zinc-100 tracking-tight"
+            >
+              Ask
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+              </svg>
+            </button>
+          </div>
+        </form>
+
+        <!-- Status line -->
+        <p id="queryStatus" class="mt-3 text-xs text-zinc-500 min-h-[1.2rem]"></p>
+      </div>
+    </section>
+
+    <!-- ── Answer panel ───────────────────────────────────── -->
+    <section class="fade-up d4 border border-zinc-800 rounded-xl bg-[#111113] overflow-hidden mb-5">
+      <div class="flex items-center gap-2.5 px-5 py-3 border-b border-zinc-800">
+        <span class="dot-live w-2 h-2 rounded-full bg-zinc-600"></span>
+        <span class="font-mono text-[0.6rem] tracking-widest uppercase text-zinc-500">Answer</span>
+      </div>
+      <div class="px-5 py-4 min-h-[80px]">
+        <pre id="answerBox" class="text-xs text-zinc-300 whitespace-pre-wrap leading-relaxed"></pre>
+      </div>
+    </section>
+
+    <!-- ── Cypher panel ───────────────────────────────────── -->
+    <section class="fade-up d5 border border-zinc-800 rounded-xl bg-[#0d0d0f] overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-zinc-800">
+        <div class="flex items-center gap-2.5">
+          <span class="font-mono text-[0.6rem] tracking-widest uppercase text-zinc-500">Generated Cypher</span>
+        </div>
+        <div class="flex gap-1.5" aria-hidden="true">
+          <span class="w-2.5 h-2.5 rounded-full bg-zinc-800 border border-zinc-700"></span>
+          <span class="w-2.5 h-2.5 rounded-full bg-zinc-800 border border-zinc-700"></span>
+          <span class="w-2.5 h-2.5 rounded-full bg-zinc-800 border border-zinc-700"></span>
+        </div>
+      </div>
+      <div class="px-5 py-4 min-h-[80px] overflow-auto">
+        <pre id="cypherBox" class="cypher-panel text-xs text-lime-400/80 whitespace-pre leading-relaxed"></pre>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>

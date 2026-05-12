@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Knowledge Graph LLM Engine</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Syne', 'sans-serif'],
+            mono:    ['DM Mono', 'monospace'],
+            body:    ['Manrope', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { font-family: 'Manrope', sans-serif; }
+
+    /* subtle grid lines */
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 56px 56px;
+    }
+
+    /* top ambient glow */
+    .top-glow::before {
+      content: '';
+      position: fixed;
+      top: -8%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 640px;
+      height: 320px;
+      background: radial-gradient(ellipse, rgba(163,230,53,0.05) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* staggered fade-up entrance */
+    .fade-up { opacity: 0; animation: fadeUp 0.55s ease forwards; }
+    .d1 { animation-delay: 0.05s; }
+    .d2 { animation-delay: 0.15s; }
+    .d3 { animation-delay: 0.25s; }
+    .d4 { animation-delay: 0.38s; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* badge dot */
+    .dot-live { animation: dotBlink 2.4s ease-in-out infinite; }
+    @keyframes dotBlink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.2; }
+    }
+
+    /* nav card hover */
+    .nav-card {
+      position: relative;
+      overflow: hidden;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .nav-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 0%, rgba(163,230,53,0.07), transparent 60%);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      pointer-events: none;
+    }
+    .nav-card:hover::after { opacity: 1; }
+    .nav-card:hover .card-arrow { transform: translate(3px,-3px); color: #a3e635; }
+    .nav-card:hover .card-step  { color: #a3e635; }
+
+    .card-arrow, .card-step { transition: transform 0.2s ease, color 0.2s ease; }
+
+    #healthStatus { font-family: 'DM Mono', monospace; }
+  </style>
+</head>
+
+<body class="bg-[#09090b] text-zinc-100 min-h-screen antialiased grid-bg top-glow relative overflow-x-hidden">
+
+  <div class="fixed inset-0 pointer-events-none z-0" aria-hidden="true"></div>
+
+  <main class="relative z-10 max-w-4xl mx-auto px-5 sm:px-8 py-16 sm:py-24 lg:py-28">
+
+    <!-- ── Header ─────────────────────────────────────── -->
+    <header class="mb-16 sm:mb-20">
+
+      <!-- Live badge -->
+      <div class="fade-up d1 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-lime-400/20 bg-lime-400/5 mb-8">
+        <span class="dot-live w-1.5 h-1.5 rounded-full bg-lime-400 shrink-0"></span>
+        <span class="font-mono text-[0.62rem] tracking-widest uppercase text-lime-400">GraphRAG MVP</span>
+      </div>
+
+      <!-- Title -->
+      <h1 class="fade-up d2 font-display font-bold text-[2.4rem] sm:text-5xl lg:text-[3.6rem] leading-[1.08] tracking-tight mb-5">
+        Knowledge Graph<br>
+        <span class="text-zinc-500">+ LLM Query Engine</span>
+      </h1>
+
+      <!-- Description -->
+      <p class="fade-up d3 text-zinc-400 text-sm sm:text-base leading-relaxed max-w-[500px] font-light">
+        Upload documents, extract entities, store relationships in Neo4j,
+        save metadata in Supabase, and ask questions in natural language.
+      </p>
+
+    </header>
+
+    <!-- ── Action Cards ────────────────────────────────── -->
+    <section class="fade-up d3 mb-8">
+      <p class="font-mono text-[0.6rem] tracking-widest uppercase text-zinc-600 mb-4">Quick actions</p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 border border-zinc-800 rounded-xl overflow-hidden divide-y sm:divide-y-0 sm:divide-x divide-zinc-800">
+
+        <a href="upload.html" class="nav-card bg-[#111113] hover:bg-zinc-800/60 p-6 sm:p-8 block no-underline">
+          <div class="relative z-10">
+            <div class="flex items-start justify-between mb-7">
+              <span class="card-step font-mono text-[0.6rem] tracking-widest uppercase text-zinc-600">01</span>
+              <span class="card-arrow text-zinc-600 text-xs leading-none">↗</span>
+            </div>
+            <p class="font-display font-semibold text-[0.95rem] text-zinc-100 tracking-tight mb-1.5">Upload Document</p>
+            <p class="text-xs text-zinc-500 font-light">PDF, TXT, MD</p>
+          </div>
+        </a>
+
+        <a href="query.html" class="nav-card bg-[#111113] hover:bg-zinc-800/60 p-6 sm:p-8 block no-underline">
+          <div class="relative z-10">
+            <div class="flex items-start justify-between mb-7">
+              <span class="card-step font-mono text-[0.6rem] tracking-widest uppercase text-zinc-600">02</span>
+              <span class="card-arrow text-zinc-600 text-xs leading-none">↗</span>
+            </div>
+            <p class="font-display font-semibold text-[0.95rem] text-zinc-100 tracking-tight mb-1.5">Ask Question</p>
+            <p class="text-xs text-zinc-500 font-light">Natural language query</p>
+          </div>
+        </a>
+
+        <a href="graph.html" class="nav-card bg-[#111113] hover:bg-zinc-800/60 p-6 sm:p-8 block no-underline">
+          <div class="relative z-10">
+            <div class="flex items-start justify-between mb-7">
+              <span class="card-step font-mono text-[0.6rem] tracking-widest uppercase text-zinc-600">03</span>
+              <span class="card-arrow text-zinc-600 text-xs leading-none">↗</span>
+            </div>
+            <p class="font-display font-semibold text-[0.95rem] text-zinc-100 tracking-tight mb-1.5">View Graph</p>
+            <p class="text-xs text-zinc-500 font-light">Cytoscape visualization</p>
+          </div>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- ── Database Health ─────────────────────────────── -->
+    <section class="fade-up d4">
+      <div class="border border-zinc-800 rounded-xl bg-[#111113] overflow-hidden">
+
+        <!-- Terminal-style top bar -->
+        <div class="flex items-center justify-between px-5 py-3 border-b border-zinc-800">
+          <div class="flex items-center gap-2.5">
+            <span class="dot-live w-2 h-2 rounded-full bg-zinc-600"></span>
+            <span class="font-mono text-[0.6rem] tracking-widest uppercase text-zinc-500">Database Health</span>
+          </div>
+          <div class="flex gap-1.5" aria-hidden="true">
+            <span class="w-2.5 h-2.5 rounded-full bg-zinc-800 border border-zinc-700"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-zinc-800 border border-zinc-700"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-zinc-800 border border-zinc-700"></span>
+          </div>
+        </div>
+
+        <!-- Output -->
+        <div class="px-5 py-4">
+          <pre id="healthStatus" class="text-xs text-zinc-400 whitespace-pre-wrap leading-relaxed">Checking...</pre>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Graph View — Knowledge Graph</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Syne', 'sans-serif'],
+            mono:    ['DM Mono', 'monospace'],
+            body:    ['Manrope', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { font-family: 'Manrope', sans-serif; }
+
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 56px 56px;
+    }
+
+    .top-glow::before {
+      content: '';
+      position: fixed;
+      top: -8%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 640px;
+      height: 320px;
+      background: radial-gradient(ellipse, rgba(163,230,53,0.05) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .fade-up { opacity: 0; animation: fadeUp 0.55s ease forwards; }
+    .d1 { animation-delay: 0.05s; }
+    .d2 { animation-delay: 0.15s; }
+    .d3 { animation-delay: 0.25s; }
+    .d4 { animation-delay: 0.35s; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .dot-live { animation: dotBlink 2.4s ease-in-out infinite; }
+    @keyframes dotBlink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.2; }
+    }
+
+    .back-link { transition: color 0.15s ease; }
+    .back-link:hover { color: #a3e635; }
+
+    /* Cytoscape container */
+    #cy {
+      width: 100%;
+      height: 620px;
+      background: #f5f0e8;
+      display: block;
+    }
+
+    /* Toolbar button */
+    .tool-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.07);
+      background: transparent;
+      color: #71717a;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+      font-size: 14px;
+    }
+    .tool-btn:hover {
+      background: rgba(163,230,53,0.08);
+      color: #a3e635;
+      border-color: rgba(163,230,53,0.25);
+    }
+
+    /* Legend dot */
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+
+<body class="bg-[#09090b] text-zinc-100 min-h-screen antialiased grid-bg top-glow relative overflow-x-hidden">
+
+  <main class="relative z-10 max-w-6xl mx-auto px-5 sm:px-8 py-14 sm:py-20">
+
+    <!-- ── Back nav ───────────────────────────────────────── -->
+    <div class="fade-up d1 mb-10">
+      <a href="index.html" class="back-link inline-flex items-center gap-2 font-mono text-[0.68rem] tracking-widest uppercase text-zinc-500 no-underline">
+        <span>←</span>
+        <span>Home</span>
+      </a>
+    </div>
+
+    <!-- ── Page header ────────────────────────────────────── -->
+    <header class="mb-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+      <div>
+        <div class="fade-up d1 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-lime-400/20 bg-lime-400/5 mb-7">
+          <span class="dot-live w-1.5 h-1.5 rounded-full bg-lime-400 shrink-0"></span>
+          <span class="font-mono text-[0.62rem] tracking-widest uppercase text-lime-400">Step 03</span>
+        </div>
+
+        <h1 class="fade-up d2 font-display font-bold text-3xl sm:text-4xl lg:text-5xl leading-[1.1] tracking-tight mb-3">
+          Graph<br class="hidden sm:block">
+          <span class="text-zinc-500">Visualization</span>
+        </h1>
+        <p class="fade-up d3 text-zinc-400 text-sm sm:text-base leading-relaxed max-w-sm font-light">
+          Refresh after uploading a document to see extracted entities and relationships.
+        </p>
+      </div>
+
+      <!-- Stats strip -->
+      <div class="fade-up d3 flex items-center gap-4 shrink-0">
+        <div class="border border-zinc-800 rounded-xl bg-[#111113] px-5 py-3 text-center min-w-[80px]">
+          <p class="font-mono text-[0.58rem] tracking-widest uppercase text-zinc-600 mb-1">Nodes</p>
+          <p id="nodeCount" class="font-display font-bold text-xl text-zinc-100">—</p>
+        </div>
+        <div class="border border-zinc-800 rounded-xl bg-[#111113] px-5 py-3 text-center min-w-[80px]">
+          <p class="font-mono text-[0.58rem] tracking-widest uppercase text-zinc-600 mb-1">Edges</p>
+          <p id="edgeCount" class="font-display font-bold text-xl text-zinc-100">—</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Graph card ─────────────────────────────────────── -->
+    <section class="fade-up d4 border border-zinc-800 rounded-xl bg-[#111113] overflow-hidden">
+
+      <!-- Toolbar -->
+      <div class="flex items-center justify-between px-5 py-3 border-b border-zinc-800">
+        <div class="flex items-center gap-2.5">
+          <span class="dot-live w-2 h-2 rounded-full bg-zinc-600"></span>
+          <span class="font-mono text-[0.6rem] tracking-widest uppercase text-zinc-500">Cytoscape canvas</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Zoom in -->
+          <button class="tool-btn" id="zoomIn" title="Zoom in" aria-label="Zoom in">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+          </button>
+          <!-- Zoom out -->
+          <button class="tool-btn" id="zoomOut" title="Zoom out" aria-label="Zoom out">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16"/>
+            </svg>
+          </button>
+          <!-- Fit -->
+          <button class="tool-btn" id="fitGraph" title="Fit to screen" aria-label="Fit to screen">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V5a1 1 0 011-1h3M4 16v3a1 1 0 001 1h3m9-14h3a1 1 0 011 1v3m0 9v3a1 1 0 01-1 1h-3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Cytoscape viewport -->
+      <div id="cy"></div>
+
+      <!-- Legend footer -->
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 py-3 border-t border-zinc-800">
+        <div class="flex items-center gap-2">
+          <span class="legend-dot" style="background:#a3e635;"></span>
+          <span class="font-mono text-[0.6rem] text-zinc-500">Entity</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="legend-dot" style="background:#3b82f6;"></span>
+          <span class="font-mono text-[0.6rem] text-zinc-500">Concept</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="legend-dot" style="background:#f59e0b;"></span>
+          <span class="font-mono text-[0.6rem] text-zinc-500">Document</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="legend-dot bg-zinc-600 border border-zinc-500"></span>
+          <span class="font-mono text-[0.6rem] text-zinc-500">Relationship</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Toolbar controls — wired up after app.js initialises `window.cy`
+    function waitForCy(cb) {
+      if (window.cy) { cb(window.cy); return; }
+      const t = setInterval(() => { if (window.cy) { clearInterval(t); cb(window.cy); } }, 100);
+    }
+
+    document.getElementById('zoomIn').addEventListener('click', () => {
+      waitForCy(cy => cy.zoom({ level: cy.zoom() * 1.2, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } }));
+    });
+    document.getElementById('zoomOut').addEventListener('click', () => {
+      waitForCy(cy => cy.zoom({ level: cy.zoom() * 0.8, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } }));
+    });
+    document.getElementById('fitGraph').addEventListener('click', () => {
+      waitForCy(cy => cy.fit(undefined, 32));
+    });
+
+    // Node / edge counters — update whenever cy data changes
+    function updateCounts() {
+      waitForCy(cy => {
+        document.getElementById('nodeCount').textContent = cy.nodes().length || '—';
+        document.getElementById('edgeCount').textContent = cy.edges().length || '—';
+        cy.on('add remove', () => {
+          document.getElementById('nodeCount').textContent = cy.nodes().length || '—';
+          document.getElementById('edgeCount').textContent = cy.edges().length || '—';
+        });
+      });
+    }
+    updateCounts();
+  </script>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>
